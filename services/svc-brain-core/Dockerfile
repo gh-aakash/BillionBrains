@@ -1,5 +1,5 @@
 # Builder Stage
-FROM rust:1.84 as builder
+FROM rust:1.83 as builder
 WORKDIR /app
 COPY . .
 RUN cargo build --release -p svc-brain-core
