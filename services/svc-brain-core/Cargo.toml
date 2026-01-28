@@ -17,6 +17,7 @@ tonic = "0.12"
 prost = "0.13"
 shared-proto = { path = "../../shared-libs/proto" }
 time = "=0.3.36"
+base64ct = "=1.6.0"
 
 [build-dependencies]
 tonic-build = "0.12"
