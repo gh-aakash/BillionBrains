@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: svc-brain-core
+  namespace: default
+  labels:
+    app: svc-brain-core
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: svc-brain-core
+  template:
+    metadata:
+      labels:
+        app: svc-brain-core
+    spec:
+      containers:
+      - name: svc-brain-core
+        image: ghcr.io/gh-aakash/billionbrains/svc-brain-core:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 50052
+          name: grpc
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: database-url
+        - name: NATS_URL
+          value: "nats:4222"
+        - name: RUST_LOG
+          value: "info"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc-brain-core
+  namespace: default
+spec:
+  ports:
+  - port: 50052
+    targetPort: 50052
+    name: grpc
+  selector:
+    app: svc-brain-core
