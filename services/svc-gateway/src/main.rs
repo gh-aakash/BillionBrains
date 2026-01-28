@@ -20,22 +20,22 @@ struct AppState {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt::init();
 
-    // In a real app, these URIs would come from env vars
-    let user_service_url = "http://127.0.0.1:50051";
-    let idea_service_url = "http://127.0.0.1:50052";
+    // Get service URLs from environment variables or use Kubernetes service names
+    let user_service_url = std::env::var("USER_SERVICE_URL")
+        .unwrap_or_else(|_| "http://svc-identity:50051".to_string());
+    let idea_service_url = std::env::var("IDEA_SERVICE_URL")
+        .unwrap_or_else(|_| "http://svc-brain-core:50052".to_string());
 
-    println!("Connecting to services...");
-    // Connect lazily
-    let user_client = UserServiceClient::connect(user_service_url).await.or_else(|e| {
-        println!("Warning: Could not connect to User Service: {}", e);
-        // Return a broken client or handle retry. For MVP we panic or retry loop
-        // But here we rely on tonic's lazy connection (requires Endpoint to be built properly)
-         UserServiceClient::connect(user_service_url) // This creates a future, we need Endpoint::connect to be lazy really
-    }); 
+    println!("Connecting to User Service at: {}", user_service_url);
+    println!("Connecting to Idea Service at: {}", idea_service_url);
     
-    // Better way for startup resilience:
-    let user_channel = Channel::from_static(user_service_url).connect_lazy();
-    let idea_channel = Channel::from_static(idea_service_url).connect_lazy();
+    // Use lazy connections for resilience
+    let user_channel = Channel::from_shared(user_service_url)
+        .expect("Invalid user service URL")
+        .connect_lazy();
+    let idea_channel = Channel::from_shared(idea_service_url)
+        .expect("Invalid idea service URL")
+        .connect_lazy();
 
     let state = AppState {
         user_client: UserServiceClient::new(user_channel),

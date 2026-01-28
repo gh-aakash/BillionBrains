@@ -23,12 +23,12 @@ spec:
         - containerPort: 4000
           name: http
         env:
+        - name: USER_SERVICE_URL
+          value: "http://svc-identity:50051"
+        - name: IDEA_SERVICE_URL
+          value: "http://svc-brain-core:50052"
         - name: NATS_URL
           value: "nats:4222"
-        - name: IDENTITY_SERVICE_URL
-          value: "http://svc-identity:50051"
-        - name: BRAIN_CORE_SERVICE_URL
-          value: "http://svc-brain-core:50052"
         - name: RUST_LOG
           value: "info"
 ---
