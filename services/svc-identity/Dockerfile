@@ -3,7 +3,7 @@ FROM rust:1.83 as builder
 WORKDIR /app
 COPY . .
 # Build the specific service
-RUN cargo build --release -p svc-identity
+RUN cargo build --release --locked -p svc-identity
 
 # Runtime Stage
 FROM debian:bookworm-slim
