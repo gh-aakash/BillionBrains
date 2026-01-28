@@ -1,5 +1,5 @@
 # Builder Stage
-FROM rust:1.81 as builder
+FROM rustlang/rust:nightly AS builder
 WORKDIR /app
 COPY . .
 RUN cargo build --release --locked -p svc-gateway
