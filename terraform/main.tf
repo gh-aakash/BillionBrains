@@ -13,7 +13,7 @@ provider "azurerm" {
 
 resource "azurerm_resource_group" "bb_rg" {
   name     = "billion-brains-rg"
-  location = "East US"
+  location = "East US 2"
 }
 
 resource "azurerm_kubernetes_cluster" "bb_aks" {
@@ -25,7 +25,7 @@ resource "azurerm_kubernetes_cluster" "bb_aks" {
   default_node_pool {
     name       = "default"
     node_count = 1
-    vm_size    = "Standard_B2s" # Cost-effective burstable VM
+    vm_size    = "Standard_D2s_v3" # More generally available
   }
 
   identity {
