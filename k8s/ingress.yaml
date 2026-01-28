@@ -13,6 +13,17 @@ spec:
     - app.billionbrains.co
     secretName: billion-brains-tls
   rules:
+  # Default rule for IP-based access
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: web-app
+            port:
+              number: 3000
+  # Domain-based rules
   - host: api.billionbrains.co
     http:
       paths:
