@@ -1,0 +1,20 @@
+[package]
+name = "svc-identity"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = "0.7"
+tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "time"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+dotenvy = "0.15"
+tonic = "0.12"
+prost = "0.13"
+
+[build-dependencies]
+tonic-build = "0.12"

@@ -1,0 +1,102 @@
+services:
+  # Infrastructure
+  postgres:
+    image: postgres:16
+    container_name: bb-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: billion_brains
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - bb-net
+
+  nats:
+    image: nats:2.10
+    container_name: bb-nats
+    command: "-js"
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    networks:
+      - bb-net
+
+  redis:
+    image: redis:7
+    container_name: bb-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - bb-net
+
+  # Microservices
+  svc-identity:
+    build:
+      context: .
+      dockerfile: services/svc-identity/Dockerfile
+    container_name: bb-identity
+    environment:
+      DATABASE_URL: postgres://postgres:password@postgres:5432/billion_brains
+      NATS_URL: nats:4222
+      RUST_LOG: debug
+    depends_on:
+      - postgres
+      - nats
+    networks:
+      - bb-net
+
+  svc-brain-core:
+    build:
+      context: .
+      dockerfile: services/svc-brain-core/Dockerfile
+    container_name: bb-brain-core
+    environment:
+      DATABASE_URL: postgres://postgres:password@postgres:5432/billion_brains
+      NATS_URL: nats:4222
+      RUST_LOG: debug
+    depends_on:
+      - postgres
+      - nats
+    networks:
+      - bb-net
+
+  svc-gateway:
+    build:
+      context: .
+      dockerfile: services/svc-gateway/Dockerfile
+    container_name: bb-gateway
+    environment:
+      NATS_URL: nats:4222
+      IDENTITY_SERVICE_URL: http://svc-identity:50051
+      BRAIN_CORE_SERVICE_URL: http://svc-brain-core:50052
+    ports:
+      - "4000:4000"
+    depends_on:
+      - svc-identity
+      - svc-brain-core
+    networks:
+      - bb-net
+
+  web-app:
+    build:
+      context: .
+      dockerfile: web-app/Dockerfile
+    container_name: bb-web-app
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - svc-gateway
+    networks:
+      - bb-net
+
+networks:
+  bb-net:
+    driver: bridge
+
+volumes:
+  postgres_data:

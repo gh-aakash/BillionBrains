@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package idea;
+
+service IdeaService {
+  rpc CreateIdea (CreateIdeaRequest) returns (Idea);
+  rpc GetIdea (GetIdeaRequest) returns (Idea);
+  rpc ListIdeas (ListIdeasRequest) returns (ListIdeasResponse);
+}
+
+message Idea {
+  string id = 1;
+  string title = 2;
+  string problem = 3;
+  string solution = 4;
+  string creator_id = 5;
+  int32 status = 6; 
+}
+
+message CreateIdeaRequest {
+  string title = 1;
+  string problem = 2;
+  string solution = 3;
+  string creator_id = 4;
+}
+
+message GetIdeaRequest {
+  string id = 1;
+}
+
+message ListIdeasRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListIdeasResponse {
+  repeated Idea ideas = 1;
+  string next_page_token = 2;
+}

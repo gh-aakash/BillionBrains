@@ -1,0 +1,15 @@
+target/
+**/*.rs.bk
+Cargo.lock
+.env
+.idea/
+.vscode/
+node_modules/
+.next/
+out/
+build/
+dist/
+*.log
+tmp/
+manifests/
+k8s/secrets/

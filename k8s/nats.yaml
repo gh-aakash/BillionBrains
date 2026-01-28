@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nats
+  namespace: default
+spec:
+  serviceName: "nats"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nats
+  template:
+    metadata:
+      labels:
+        app: nats
+    spec:
+      containers:
+      - name: nats
+        image: nats:2.10
+        args: ["-js"] # Enable JetStream
+        ports:
+        - containerPort: 4222
+          name: client
+        - containerPort: 8222
+          name: monitor
+        volumeMounts:
+        - name: nats-data
+          mountPath: /data
+  volumeClaimTemplates:
+  - metadata:
+      name: nats-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nats
+  namespace: default
+spec:
+  ports:
+  - port: 4222
+    name: client
+  - port: 8222
+    name: monitor
+  selector:
+    app: nats
+  clusterIP: None

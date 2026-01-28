@@ -1,0 +1,19 @@
+[package]
+name = "svc-gateway"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = "0.7"
+tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+tonic = "0.12"
+prost = "0.13"
+dotenvy = "0.15"
+
+# Import shared protos
+shared-proto = { path = "../../shared-libs/proto" }

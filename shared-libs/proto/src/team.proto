@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package team;
+
+service TeamService {
+  rpc CreateTeam (CreateTeamRequest) returns (Team);
+}
+
+message Team {
+  string id = 1;
+  string idea_id = 2;
+  repeated Member members = 3;
+}
+
+message Member {
+  string user_id = 1;
+  string role = 2;
+}
+
+message CreateTeamRequest {
+  string idea_id = 1;
+  string owner_id = 2;
+}
