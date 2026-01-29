@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package task;
+
+message Project {
+  string id = 1;
+  string owner_id = 2;
+  string name = 3;
+  string description = 4;
+  string status = 5;
+}
+
+message Task {
+  string id = 1;
+  string project_id = 2;
+  string title = 3;
+  string description = 4;
+  string status = 5;
+  string priority = 6;
+  string assignee_id = 7;
+  int32 position = 8;
+}
+
+message CreateProjectRequest {
+  string owner_id = 1;
+  string name = 2;
+  string description = 3;
+}
+
+message ListProjectsRequest {
+  string owner_id = 1;
+}
+
+message ListProjectsResponse {
+  repeated Project projects = 1;
+}
+
+message CreateTaskRequest {
+  string project_id = 1;
+  string title = 2;
+  string description = 3;
+  string priority = 4;
+  string assignee_id = 5;
+}
+
+message UpdateTaskRequest {
+  string id = 1;
+  string status = 2; // Optional, empty to keep
+  string priority = 3; // Optional
+  int32 position = 4; // Optional, -1 to keep
+}
+
+message UpdateTaskResponse {
+  Task task = 1;
+}
+
+message ListTasksRequest {
+    string project_id = 1;
+}
+
+message ListTasksResponse {
+    repeated Task tasks = 1;
+}
+
+service TaskService {
+  rpc CreateProject (CreateProjectRequest) returns (Project);
+  rpc ListProjects (ListProjectsRequest) returns (ListProjectsResponse);
+  
+  rpc CreateTask (CreateTaskRequest) returns (Task);
+  rpc UpdateTask (UpdateTaskRequest) returns (UpdateTaskResponse);
+  rpc ListTasks (ListTasksRequest) returns (ListTasksResponse);
+}
