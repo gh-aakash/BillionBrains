@@ -9,6 +9,7 @@ import {
     Search
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { NotificationBell } from "@/components/dashboard/notification-bell"
 
 export default function DashboardLayout({
     children,
@@ -83,6 +84,7 @@ export default function DashboardLayout({
                             className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[336px] h-9 border border-input text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                         />
                     </div>
+                    <NotificationBell />
                     <Button variant="ghost" size="icon" className="rounded-full">
                         <img
                             src="https://github.com/shadcn.png"
