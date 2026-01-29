@@ -1,0 +1,116 @@
+"use server"
+
+import { cookies } from "next/headers"
+import * as grpc from "@grpc/grpc-js"
+import * as protoLoader from "@grpc/proto-loader"
+import path from "path"
+
+const PROTO_PATH = path.join(process.cwd(), "../shared-libs/proto/src/task.proto")
+
+let taskClient: any = null
+
+function getTaskClient() {
+    if (taskClient) return taskClient
+
+    try {
+        const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
+            keepCase: true,
+            longs: String,
+            enums: String,
+            defaults: true,
+            oneofs: true,
+        })
+
+        const taskProto = grpc.loadPackageDefinition(packageDefinition).task as any
+        const target = process.env.BRAIN_SERVICE_URL || "svc-brain-core:50052"
+
+        taskClient = new taskProto.TaskService(
+            target,
+            grpc.credentials.createInsecure()
+        )
+        return taskClient
+    } catch (e) {
+        console.error("Failed to load Task Proto or connect:", e)
+        return null
+    }
+}
+
+export async function createProjectAction(name: string, description: string, owner_id: string) {
+    const client = getTaskClient()
+    if (!client) return { error: "Service unavailable" }
+
+    return new Promise<{ success?: boolean; error?: string; project?: any }>((resolve) => {
+        client.CreateProject({ name, description, owner_id }, (err: any, response: any) => {
+            if (err) {
+                console.error("CreateProject Error:", err)
+                resolve({ error: err.details || "Failed to create project" })
+            } else {
+                resolve({ success: true, project: response })
+            }
+        })
+    })
+}
+
+export async function listProjectsAction(owner_id: string) {
+    const client = getTaskClient()
+    if (!client) return { error: "Service unavailable" }
+
+    return new Promise<{ success?: boolean; error?: string; projects?: any[] }>((resolve) => {
+        client.ListProjects({ owner_id }, (err: any, response: any) => {
+            if (err) {
+                console.error("ListProjects Error:", err)
+                resolve({ error: "Failed to fetch projects" })
+            } else {
+                resolve({ success: true, projects: response.projects || [] })
+            }
+        })
+    })
+}
+
+export async function createTaskAction(project_id: string, title: string, priority: string, assignee_id?: string) {
+    const client = getTaskClient()
+    if (!client) return { error: "Service unavailable" }
+
+    return new Promise<{ success?: boolean; error?: string; task?: any }>((resolve) => {
+        client.CreateTask({ project_id, title, priority, assignee_id: assignee_id || "" }, (err: any, response: any) => {
+            if (err) {
+                console.error("CreateTask Error:", err)
+                resolve({ error: err.details || "Failed to create task" })
+            } else {
+                resolve({ success: true, task: response })
+            }
+        })
+    })
+}
+
+export async function listTasksAction(project_id: string) {
+    const client = getTaskClient()
+    if (!client) return { error: "Service unavailable" }
+
+    return new Promise<{ success?: boolean; error?: string; tasks?: any[] }>((resolve) => {
+        client.ListTasks({ project_id }, (err: any, response: any) => {
+            if (err) {
+                console.error("ListTasks Error:", err)
+                resolve({ error: "Failed to fetch tasks" })
+            } else {
+                resolve({ success: true, tasks: response.tasks || [] })
+            }
+        })
+    })
+}
+
+export async function updateTaskAction(id: string, status?: string, priority?: string, position?: number) {
+    const client = getTaskClient()
+    if (!client) return { error: "Service unavailable" }
+
+    return new Promise<{ success?: boolean; error?: string; task?: any }>((resolve) => {
+        client.UpdateTask({ id, status: status || "", priority: priority || "", position: position ?? -1 }, (err: any, response: any) => {
+            if (err) {
+                console.error("UpdateTask Error:", err)
+                resolve({ error: "Failed to update task" })
+            } else {
+                resolve({ success: true, task: response.task })
+            }
+        })
+    })
+}
