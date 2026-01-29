@@ -67,6 +67,47 @@ export async function listProjectsAction(owner_id: string) {
     })
 }
 
+export async function listPublicProjectsAction(industry_filter?: string) {
+    const client = getTaskClient()
+    if (!client) return { error: "Service unavailable" }
+
+    return new Promise<{ success?: boolean; error?: string; projects?: any[] }>((resolve) => {
+        client.ListPublicProjects({ industry_filter: industry_filter || "" }, (err: any, response: any) => {
+            if (err) {
+                console.error("ListPublicProjects Error:", err)
+                resolve({ error: "Failed to fetch public projects" })
+            } else {
+                resolve({ success: true, projects: response.projects || [] })
+            }
+        })
+    })
+}
+
+export async function updateProjectAction(id: string, data: { description?: string, funding_goal?: number, equity_offered?: number, is_public?: boolean, industry?: string }) {
+    const client = getTaskClient()
+    if (!client) return { error: "Service unavailable" }
+
+    const payload = {
+        id,
+        description: data.description || "",
+        funding_goal: data.funding_goal || 0,
+        equity_offered: data.equity_offered || 0,
+        is_public: data.is_public ?? false,
+        industry: data.industry || ""
+    }
+
+    return new Promise<{ success?: boolean; error?: string; project?: any }>((resolve) => {
+        client.UpdateProject(payload, (err: any, response: any) => {
+            if (err) {
+                console.error("UpdateProject Error:", err)
+                resolve({ error: err.details || "Failed to update project" })
+            } else {
+                resolve({ success: true, project: response })
+            }
+        })
+    })
+}
+
 export async function createTaskAction(project_id: string, title: string, priority: string, assignee_id?: string) {
     const client = getTaskClient()
     if (!client) return { error: "Service unavailable" }

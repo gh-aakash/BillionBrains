@@ -6,6 +6,7 @@ import { BarChart, DollarSign, Rocket, Users, Layout, List, FolderPlus } from "l
 import { ProjectBoard } from "@/components/dashboard/project-board"
 import { ProjectList } from "@/components/dashboard/project-list"
 import { ProjectDocs } from "@/components/dashboard/project-docs"
+import { ProjectSettings } from "@/components/dashboard/project-settings"
 import { listProjectsAction, listTasksAction, createProjectAction } from "@/app/actions/project"
 import { redirect } from "next/navigation"
 
@@ -36,17 +37,29 @@ export default async function CreatorDashboardPage({ searchParams }: { searchPar
     // Okay, for this "God Level" demo, we'll use a placeholder behavior:
     // "Create Your First Project" -> Input Name -> Submit -> Calls Action -> Redirects with ?projectId=...
 
-    let projects: any[] = []
     let tasks: any[] = []
+    let currentProject: any = null
 
     // Use a hacky "Public" fetch or rely on user creation return
     // If ?projectId is present, fetch that project's tasks
     const projectId = searchParams?.projectId
 
     if (projectId) {
+        // Fetch tasks
         const taskRes = await listTasksAction(projectId)
         if (taskRes.success) {
             tasks = taskRes.tasks || []
+        }
+
+        // Fetch project details - WE NEED A GET PROJECT ACTION or find in list
+        // Since listProjects returns specific fields, let's use listProjects(owner_id) 
+        // But we don't have owner_id easily? 
+        // We do have "listPublicProjects" but this might be private.
+        // I will add a `getProject` action? Or just iterate listProjects ("123...").
+        // Let's assume we can fetch all projects for the demo user.
+        const projectsRes = await listProjectsAction("123e4567-e89b-12d3-a456-426614174000") // Demo User
+        if (projectsRes.success) {
+            currentProject = (projectsRes.projects || []).find((p: any) => p.id === projectId)
         }
     }
 
@@ -93,6 +106,7 @@ export default async function CreatorDashboardPage({ searchParams }: { searchPar
                     <TabsList>
                         <TabsTrigger value="overview">Overview</TabsTrigger>
                         <TabsTrigger value="projects">Tasks (Real)</TabsTrigger>
+                        <TabsTrigger value="settings">Settings</TabsTrigger>
                         <TabsTrigger value="docs">Docs</TabsTrigger>
                     </TabsList>
 
@@ -124,6 +138,10 @@ export default async function CreatorDashboardPage({ searchParams }: { searchPar
 
                     <TabsContent value="docs" className="space-y-4">
                         <ProjectDocs />
+                    </TabsContent>
+
+                    <TabsContent value="settings" className="space-y-4">
+                        {currentProject ? <ProjectSettings project={currentProject} /> : <div>Loading...</div>}
                     </TabsContent>
                 </Tabs>
             )}

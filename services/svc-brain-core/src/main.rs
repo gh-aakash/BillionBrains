@@ -243,6 +243,77 @@ impl TaskService for MyTaskService {
 
         Ok(Response::new(UpdateTaskResponse { task: Some(task) }))
     }
+
+    async fn update_project(&self, request: Request<UpdateProjectRequest>) -> Result<Response<Project>, Status> {
+        let req = request.into_inner();
+        let id = Uuid::parse_str(&req.id).map_err(|_| Status::invalid_argument("Invalid Project UUID"))?;
+
+        if !req.description.is_empty() {
+             sqlx::query("UPDATE projects SET description = $1 WHERE id = $2").bind(&req.description).bind(id).execute(&self.pool).await.ok();
+        }
+        if req.funding_goal > 0.0 {
+             sqlx::query("UPDATE projects SET funding_goal = $1 WHERE id = $2").bind(req.funding_goal).bind(id).execute(&self.pool).await.ok();
+        }
+        if req.equity_offered >= 0.0 {
+             sqlx::query("UPDATE projects SET equity_offered = $1 WHERE id = $2").bind(req.equity_offered).bind(id).execute(&self.pool).await.ok();
+        }
+        // Always update is_public boolean
+        sqlx::query("UPDATE projects SET is_public = $1 WHERE id = $2").bind(req.is_public).bind(id).execute(&self.pool).await.ok();
+        
+        if !req.industry.is_empty() {
+             sqlx::query("UPDATE projects SET industry = $1 WHERE id = $2").bind(&req.industry).bind(id).execute(&self.pool).await.ok();
+        }
+
+        let row = sqlx::query("SELECT id, owner_id, name, description, status, funding_goal, equity_offered, is_public, industry FROM projects WHERE id = $1")
+            .bind(id)
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|_| Status::not_found("Project not found"))?;
+
+        Ok(Response::new(Project {
+            id: row.get::<Uuid, _>("id").to_string(),
+            owner_id: row.get::<Uuid, _>("owner_id").to_string(),
+            name: row.get("name"),
+            description: row.get::<Option<String>, _>("description").unwrap_or_default(),
+            status: row.get("status"), 
+            funding_goal: row.get("funding_goal"),
+            equity_offered: row.get("equity_offered"),
+            is_public: row.get("is_public"),
+            industry: row.get::<Option<String>, _>("industry").unwrap_or_default(),
+        }))
+    }
+
+    async fn list_public_projects(&self, request: Request<ListPublicProjectsRequest>) -> Result<Response<ListProjectsResponse>, Status> {
+         let req = request.into_inner();
+         
+         // Simple filter for now
+         let query = if !req.industry_filter.is_empty() {
+             "SELECT id, owner_id, name, description, status, funding_goal, equity_offered, is_public, industry FROM projects WHERE is_public = true AND industry = $1 ORDER BY created_at DESC"
+         } else {
+             "SELECT id, owner_id, name, description, status, funding_goal, equity_offered, is_public, industry FROM projects WHERE is_public = true ORDER BY created_at DESC"
+         };
+         
+         let q = sqlx::query(query);
+         let rows = if !req.industry_filter.is_empty() {
+             q.bind(req.industry_filter).fetch_all(&self.pool).await
+         } else {
+             q.fetch_all(&self.pool).await
+         }.map_err(|e| Status::internal(format!("DB: {}", e)))?;
+
+         let projects = rows.into_iter().map(|row| Project {
+            id: row.get::<Uuid, _>("id").to_string(),
+            owner_id: row.get::<Uuid, _>("owner_id").to_string(),
+            name: row.get("name"),
+            description: row.get::<Option<String>, _>("description").unwrap_or_default(),
+            status: row.get("status"), 
+            funding_goal: row.get("funding_goal"),
+            equity_offered: row.get("equity_offered"),
+            is_public: row.get("is_public"),
+            industry: row.get::<Option<String>, _>("industry").unwrap_or_default(),
+         }).collect();
+         
+         Ok(Response::new(ListProjectsResponse { projects }))
+    }
 }
 
 #[tokio::main]
