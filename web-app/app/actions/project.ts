@@ -161,16 +161,20 @@ export async function listTasksAction(project_id: string) {
     })
 }
 
-return new Promise<{ success?: boolean; error?: string; task?: any }>((resolve) => {
-    client.UpdateTask({ id, status: status || "", priority: priority || "", position: position ?? -1 }, (err: any, response: any) => {
-        if (err) {
-            console.error("UpdateTask Error:", err)
-            resolve({ error: "Failed to update task" })
-        } else {
-            resolve({ success: true, task: response.task })
-        }
+export async function updateTaskAction(id: string, status?: string, priority?: string, position?: number) {
+    const client = getTaskClient()
+    if (!client) return { error: "Service unavailable" }
+
+    return new Promise<{ success?: boolean; error?: string; task?: any }>((resolve) => {
+        client.UpdateTask({ id, status: status || "", priority: priority || "", position: position ?? -1 }, (err: any, response: any) => {
+            if (err) {
+                console.error("UpdateTask Error:", err)
+                resolve({ error: "Failed to update task" })
+            } else {
+                resolve({ success: true, task: response.task })
+            }
+        })
     })
-})
 }
 
 export async function listNotificationsAction(user_id: string) {
