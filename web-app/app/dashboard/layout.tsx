@@ -9,6 +9,7 @@ import {
     Search
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { LaunchButton } from "@/components/dashboard/launch-button"
 import { NotificationBell } from "@/components/dashboard/notification-bell"
 
 export default function DashboardLayout({
@@ -56,10 +57,7 @@ export default function DashboardLayout({
 
                 {/* Bottom Actions */}
                 <div className="mt-auto p-4">
-                    <Button size="sm" className="w-full gap-2">
-                        <PlusCircle className="h-4 w-4" />
-                        New Idea
-                    </Button>
+                    <LaunchButton />
                     <div className="mt-4 border-t pt-4">
                         <Link
                             href="/settings"

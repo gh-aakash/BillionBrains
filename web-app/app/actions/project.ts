@@ -35,6 +35,27 @@ function getTaskClient() {
     }
 }
 
+export async function launchProjectAction(title: string, description: string, industry: string) {
+    const client = getTaskClient()
+    if (!client) return { error: "Service unavailable" }
+
+    return new Promise<{ success?: boolean; error?: string; project?: any }>((resolve) => {
+        client.LaunchProject({
+            idea_id: "new-idea", // Mock ID
+            title,
+            description,
+            industry
+        }, (err: any, response: any) => {
+            if (err) {
+                console.error("LaunchProject Error:", err)
+                resolve({ error: "AI Launch failed" })
+            } else {
+                resolve({ success: true, project: response })
+            }
+        })
+    })
+}
+
 export async function createProjectAction(name: string, description: string, owner_id: string) {
     const client = getTaskClient()
     if (!client) return { error: "Service unavailable" }
@@ -140,17 +161,60 @@ export async function listTasksAction(project_id: string) {
     })
 }
 
-export async function updateTaskAction(id: string, status?: string, priority?: string, position?: number) {
+return new Promise<{ success?: boolean; error?: string; task?: any }>((resolve) => {
+    client.UpdateTask({ id, status: status || "", priority: priority || "", position: position ?? -1 }, (err: any, response: any) => {
+        if (err) {
+            console.error("UpdateTask Error:", err)
+            resolve({ error: "Failed to update task" })
+        } else {
+            resolve({ success: true, task: response.task })
+        }
+    })
+})
+}
+
+export async function listNotificationsAction(user_id: string) {
     const client = getTaskClient()
     if (!client) return { error: "Service unavailable" }
 
-    return new Promise<{ success?: boolean; error?: string; task?: any }>((resolve) => {
-        client.UpdateTask({ id, status: status || "", priority: priority || "", position: position ?? -1 }, (err: any, response: any) => {
+    return new Promise<{ success?: boolean; error?: string; notifications?: any[] }>((resolve) => {
+        client.ListNotifications({ user_id }, (err: any, response: any) => {
             if (err) {
-                console.error("UpdateTask Error:", err)
-                resolve({ error: "Failed to update task" })
+                console.error("ListNotifications Error:", err)
+                resolve({ error: "Failed to fetch notifications" })
             } else {
-                resolve({ success: true, task: response.task })
+                resolve({ success: true, notifications: response.notifications || [] })
+            }
+        })
+    })
+}
+
+export async function expressInterestAction(project_id: string, owner_id: string, project_name: string) {
+    const client = getTaskClient()
+    if (!client) return { error: "Service unavailable" }
+
+    // In a real app, we get Current User (Investor) from Session.
+    // For Demo: We use a Mock Investor ID.
+    const investor_id = "investor-uuid-demo"
+
+    return new Promise<{ success?: boolean; error?: string }>((resolve) => {
+        const content = `New Investment Interest in ${project_name}!`
+        const payload = JSON.stringify({ project_id, investor_id })
+
+        client.CreateNotification({
+            user_id: owner_id,
+            type_pb: "investment_interest", // Proto field is `type`, Rust is `r#type`?
+            // Actually, generated JS/TS code uses `type`. The Rust issue was internal.
+            // Wait, proto field is `type`.
+            type: "investment_interest",
+            content,
+            payload_json: payload
+        }, (err: any, response: any) => {
+            if (err) {
+                console.error("CreateNotification Error:", err)
+                resolve({ error: "Failed to send interest" })
+            } else {
+                resolve({ success: true })
             }
         })
     })
