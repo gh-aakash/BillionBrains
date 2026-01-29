@@ -25,6 +25,10 @@ spec:
         env:
         - name: NEXT_PUBLIC_API_URL
           value: "http://20.22.9.171"
+        - name: IDENTITY_SERVICE_URL
+          value: "svc-identity:50051"
+        - name: BRAIN_SERVICE_URL
+          value: "svc-brain-core:50052"
 ---
 apiVersion: v1
 kind: Service
