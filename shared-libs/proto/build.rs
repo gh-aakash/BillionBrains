@@ -1,6 +1,6 @@
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     tonic_build::configure()
-        .compile(
+        .compile_protos(
             &["src/user.proto", "src/idea.proto", "src/team.proto", "src/task.proto"],
             &["src"],
         )?;

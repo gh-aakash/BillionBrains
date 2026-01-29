@@ -6,7 +6,7 @@ use tracing_subscriber::FmtSubscriber;
 use shared_proto::idea::idea_service_server::{IdeaService, IdeaServiceServer};
 use shared_proto::idea::{Idea, CreateIdeaRequest, GetIdeaRequest, ListIdeasRequest, ListIdeasResponse};
 use shared_proto::task::task_service_server::{TaskService, TaskServiceServer};
-use shared_proto::task::{Task, Project, CreateTaskRequest, ListTasksRequest, ListTasksResponse, CreateProjectRequest, ListProjectsRequest, ListProjectsResponse, UpdateTaskRequest, UpdateTaskResponse, UpdateProjectRequest, ListPublicProjectsRequest, CreateNotificationRequest, ListNotificationsRequest, ListNotificationsResponse, Notification};
+use shared_proto::task::{Task, Project, CreateTaskRequest, ListTasksRequest, ListTasksResponse, CreateProjectRequest, ListProjectsRequest, ListProjectsResponse, UpdateTaskRequest, UpdateTaskResponse, UpdateProjectRequest, ListPublicProjectsRequest, CreateNotificationRequest, ListNotificationsRequest, ListNotificationsResponse, Notification, LaunchProjectRequest};
 use sqlx::{PgPool, Row};
 use sqlx::postgres::PgPoolOptions;
 use uuid::Uuid;
@@ -45,10 +45,6 @@ impl IdeaService for MyIdeaService {
     }
 
     async fn get_idea(&self, request: Request<GetIdeaRequest>) -> Result<Response<Idea>, Status> {
-       // reuse existing logic from previous step, abbreviated for brevity of this focused update
-       // For now, let's keep it simple or copy-paste previous logic if needed. 
-       // To save context tokens, I assume get_idea logic is less critical for Project Mgmt task.
-       // But I must implement it to compile!
        let req = request.into_inner();
        let idea_uuid = Uuid::parse_str(&req.id).map_err(|_| Status::invalid_argument("Invalid UUID"))?;
        let row = sqlx::query("SELECT id, creator_id, title, problem, solution, status FROM ideas WHERE id = $1")
@@ -202,8 +198,6 @@ impl TaskService for MyTaskService {
         let req = request.into_inner();
         let id = Uuid::parse_str(&req.id).map_err(|_| Status::invalid_argument("Invalid Task UUID"))?;
 
-        // Simple update logic: if fields are non-empty, update.
-        // For status/priority/position
         if !req.status.is_empty() {
             sqlx::query("UPDATE tasks SET status = $1 WHERE id = $2")
                 .bind(&req.status)
@@ -223,7 +217,6 @@ impl TaskService for MyTaskService {
                 .execute(&self.pool).await.ok();
         }
 
-        // Fetch updated
         let row = sqlx::query("SELECT id, project_id, title, description, status, priority, assignee_id, position FROM tasks WHERE id = $1")
             .bind(id)
             .fetch_one(&self.pool)
@@ -244,19 +237,7 @@ impl TaskService for MyTaskService {
         Ok(Response::new(UpdateTaskResponse { task: Some(task) }))
     }
 
-        Ok(Response::new(UpdateTaskResponse { task: Some(task) }))
-    }
-
     async fn update_project(&self, request: Request<UpdateProjectRequest>) -> Result<Response<Project>, Status> {
-       // ... existing implementation ... 
-       // Keeping brevity, I assume replace_file_content preserves existing if I target carefully?
-       // Actually, I am targeted the END of file? No using multi_replace is safer or reading full file.
-       // But I will just Replace the whole `update_project` block + add new methods if I knew line numbers.
-       // I'll assume context from previous read.
-       // Wait, I am replacing `update_project` again? No, I should append AFTER it.
-       // But I don't have a good anchor after `update_project` except the closing brace of impl.
-       // Let's use `create_notification` implementation.
-       
        let req = request.into_inner();
         let id = Uuid::parse_str(&req.id).map_err(|_| Status::invalid_argument("Invalid Project UUID"))?;
 
@@ -264,10 +245,10 @@ impl TaskService for MyTaskService {
              sqlx::query("UPDATE projects SET description = $1 WHERE id = $2").bind(&req.description).bind(id).execute(&self.pool).await.ok();
         }
         if req.funding_goal > 0.0 {
-             sqlx::query("UPDATE projects SET funding_goal = $1 WHERE id = $2").bind(req.funding_goal).bind(id).execute(&self.pool).await.ok();
+             sqlx::query("UPDATE projects SET funding_goal = $1::float8 WHERE id = $2").bind(req.funding_goal).bind(id).execute(&self.pool).await.ok();
         }
         if req.equity_offered >= 0.0 {
-             sqlx::query("UPDATE projects SET equity_offered = $1 WHERE id = $2").bind(req.equity_offered).bind(id).execute(&self.pool).await.ok();
+             sqlx::query("UPDATE projects SET equity_offered = $1::float8 WHERE id = $2").bind(req.equity_offered).bind(id).execute(&self.pool).await.ok();
         }
         sqlx::query("UPDATE projects SET is_public = $1 WHERE id = $2").bind(req.is_public).bind(id).execute(&self.pool).await.ok();
         
@@ -309,7 +290,7 @@ impl TaskService for MyTaskService {
              q.fetch_all(&self.pool).await
          }.map_err(|e| Status::internal(format!("DB: {}", e)))?;
 
-         let projects = rows.into_iter().map(|row| Project {
+         let projects = rows.into_iter().map(|row: sqlx::postgres::PgRow| Project {
             id: row.get::<Uuid, _>("id").to_string(),
             owner_id: row.get::<Uuid, _>("owner_id").to_string(),
             name: row.get("name"),
@@ -332,14 +313,7 @@ impl TaskService for MyTaskService {
         sqlx::query("INSERT INTO notifications (id, user_id, type, content, payload) VALUES ($1, $2, $3, $4, $5)")
             .bind(id)
             .bind(user_id)
-            .bind(&req.type_pb) // Careful with reserved keywords? In proto I used 'type'. In Rust it generates `type_pb` or `r#type`?
-            // Usually `type` -> `type` but Rust keyword. Prost generates `r#type` or `type_pb` if conflict?
-            // Let's check generated code... usually `type_` or `type`.
-            // I'll check my proto field name: `string type = 3;`
-            // Rust will likely use `r#type`.
-            // Wait, I can't check generated code easily.
-            // I'll use `binding` with `req.type`. If it errors, I fix.
-            .bind(&req.r#type) 
+            .bind(&req.r#type)
             .bind(&req.content)
             .bind(payload)
             .execute(&self.pool)
@@ -367,7 +341,7 @@ impl TaskService for MyTaskService {
             .await
             .map_err(|e| Status::internal(format!("DB: {}", e)))?;
 
-         let notifications = rows.into_iter().map(|row| {
+         let notifications = rows.into_iter().map(|row: sqlx::postgres::PgRow| {
              let payload: serde_json::Value = row.get("payload");
              Notification {
                 id: row.get::<Uuid, _>("id").to_string(),
@@ -382,7 +356,9 @@ impl TaskService for MyTaskService {
 
          Ok(Response::new(ListNotificationsResponse { notifications }))
     }
+}
 
+// MAIN FUNCTION
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::subscriber::set_global_default(FmtSubscriber::new())?;
