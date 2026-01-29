@@ -72,6 +72,8 @@ struct CreateUserPayload {
     username: String,
     full_name: String,
     bio: String,
+    password: String,
+    role: String,
 }
 
 async fn create_user(
@@ -82,6 +84,8 @@ async fn create_user(
         username: payload.username,
         full_name: payload.full_name,
         bio: payload.bio,
+        password: payload.password,
+        role: payload.role,
     };
 
     let resp = state.user_client.create_user(req).await
