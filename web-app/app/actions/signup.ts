@@ -1,12 +1,13 @@
 "use server"
 
+import { cookies } from "next/headers"
 import * as grpc from "@grpc/grpc-js"
 import * as protoLoader from "@grpc/proto-loader"
 import path from "path"
 
 const PROTO_PATH = path.join(process.cwd(), "../shared-libs/proto/src/user.proto")
 
-// Client definition reuse (Should be util in real app)
+// Client definition reuse
 let client: any = null
 
 function getClient() {
@@ -30,12 +31,14 @@ function getClient() {
     return client
 }
 
-export async function signupAction(formData: FormData) {
+export async function signupAction(formData: FormData): Promise<{ error?: string; success?: boolean }> {
     const full_name = formData.get("full_name") as string
     const email = formData.get("email") as string
     const password = formData.get("password") as string
     const bio = formData.get("bio") as string
     const role = formData.get("role") as string
+
+    console.log("Signup Request:", { email, role })
 
     if (!email || !password || !full_name) {
         return { error: "Missing required fields" }
@@ -43,7 +46,8 @@ export async function signupAction(formData: FormData) {
 
     const client = getClient()
 
-    return new Promise((resolve, reject) => {
+    return new Promise<{ error?: string; success?: boolean }>((resolve, reject) => {
+        // 1. Create User
         client.CreateUser({
             username: email, // Mapping email to username 
             password,
@@ -55,7 +59,28 @@ export async function signupAction(formData: FormData) {
                 console.error("gRPC Signup Error:", err)
                 resolve({ error: "Registration failed. Email might be taken." })
             } else {
-                resolve({ success: true })
+                console.log("User Created:", response)
+
+                // 2. Auto-Login
+                client.Login({ email, password }, async (loginErr: any, loginResponse: any) => {
+                    if (loginErr) {
+                        console.error("Auto-Login Error:", loginErr)
+                        // Return success anyway, user can try manual login (at least account exists)
+                        resolve({ success: true })
+                    } else if (loginResponse && loginResponse.token) {
+                        // Set Cookie
+                        const cookieStore = await cookies()
+                        cookieStore.set("token", loginResponse.token, {
+                            httpOnly: true,
+                            secure: process.env.NODE_ENV === "production",
+                            path: "/",
+                            maxAge: 60 * 60, // 1 hour
+                        })
+                        resolve({ success: true })
+                    } else {
+                        resolve({ success: true })
+                    }
+                })
             }
         })
     })
