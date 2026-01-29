@@ -9,3 +9,7 @@ pub mod idea {
 pub mod team {
     tonic::include_proto!("team");
 }
+
+pub mod task {
+    tonic::include_proto!("task");
+}
