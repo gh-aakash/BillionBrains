@@ -24,7 +24,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         // Import dynamically to avoid client-side bundling issues if any
         const { loginAction } = await import("@/app/actions/login")
 
-        const result = await loginAction(formData)
+        const result = await loginAction(formData) as { error?: string; success?: boolean }
 
         setIsLoading(false)
 
