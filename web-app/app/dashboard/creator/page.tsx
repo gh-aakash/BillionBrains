@@ -117,7 +117,7 @@ export default async function CreatorDashboardPage({ searchParams }: { searchPar
                                 <ProjectBoard tasks={tasks} />
                             </TabsContent>
                             <TabsContent value="list" className="mt-0">
-                                <ProjectList />
+                                <ProjectList tasks={tasks} />
                             </TabsContent>
                         </Tabs>
                     </TabsContent>
