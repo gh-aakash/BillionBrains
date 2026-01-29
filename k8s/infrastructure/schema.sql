@@ -38,6 +38,10 @@ CREATE TABLE IF NOT EXISTS projects (
     name VARCHAR(255) NOT NULL,
     description TEXT,
     status VARCHAR(50) DEFAULT 'active',
+    funding_goal FLOAT DEFAULT 0,
+    equity_offered FLOAT DEFAULT 0,
+    is_public BOOLEAN DEFAULT FALSE,
+    industry VARCHAR(100),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
