@@ -32,7 +32,7 @@ function getClient() {
     return client
 }
 
-export async function loginAction(formData: FormData) {
+export async function loginAction(formData: FormData): Promise<{ error?: string; success?: boolean }> {
     const email = formData.get("email") as string
     const password = formData.get("password") as string
 
@@ -42,7 +42,7 @@ export async function loginAction(formData: FormData) {
 
     const client = getClient()
 
-    return new Promise((resolve, reject) => {
+    return new Promise<{ error?: string; success?: boolean }>((resolve, reject) => {
         client.Login({ email, password }, async (err: any, response: any) => {
             if (err) {
                 console.error("gRPC Login Error:", err)
