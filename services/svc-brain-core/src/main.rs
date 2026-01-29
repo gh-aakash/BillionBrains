@@ -241,7 +241,7 @@ impl TaskService for MyTaskService {
             position: row.get("position"),
         };
 
-        Ok(Response::new(UpdateTaskResponse { task }))
+        Ok(Response::new(UpdateTaskResponse { task: Some(task) }))
     }
 }
 
