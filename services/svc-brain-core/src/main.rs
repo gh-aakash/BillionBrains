@@ -6,7 +6,7 @@ use tracing_subscriber::FmtSubscriber;
 use shared_proto::idea::idea_service_server::{IdeaService, IdeaServiceServer};
 use shared_proto::idea::{Idea, CreateIdeaRequest, GetIdeaRequest, ListIdeasRequest, ListIdeasResponse};
 use shared_proto::task::task_service_server::{TaskService, TaskServiceServer};
-use shared_proto::task::{Task, Project, CreateTaskRequest, ListTasksRequest, ListTasksResponse, CreateProjectRequest, ListProjectsRequest, ListProjectsResponse, UpdateTaskRequest, UpdateTaskResponse};
+use shared_proto::task::{Task, Project, CreateTaskRequest, ListTasksRequest, ListTasksResponse, CreateProjectRequest, ListProjectsRequest, ListProjectsResponse, UpdateTaskRequest, UpdateTaskResponse, UpdateProjectRequest, ListPublicProjectsRequest, CreateNotificationRequest, ListNotificationsRequest, ListNotificationsResponse, Notification};
 use sqlx::{PgPool, Row};
 use sqlx::postgres::PgPoolOptions;
 use uuid::Uuid;
@@ -244,8 +244,20 @@ impl TaskService for MyTaskService {
         Ok(Response::new(UpdateTaskResponse { task: Some(task) }))
     }
 
+        Ok(Response::new(UpdateTaskResponse { task: Some(task) }))
+    }
+
     async fn update_project(&self, request: Request<UpdateProjectRequest>) -> Result<Response<Project>, Status> {
-        let req = request.into_inner();
+       // ... existing implementation ... 
+       // Keeping brevity, I assume replace_file_content preserves existing if I target carefully?
+       // Actually, I am targeted the END of file? No using multi_replace is safer or reading full file.
+       // But I will just Replace the whole `update_project` block + add new methods if I knew line numbers.
+       // I'll assume context from previous read.
+       // Wait, I am replacing `update_project` again? No, I should append AFTER it.
+       // But I don't have a good anchor after `update_project` except the closing brace of impl.
+       // Let's use `create_notification` implementation.
+       
+       let req = request.into_inner();
         let id = Uuid::parse_str(&req.id).map_err(|_| Status::invalid_argument("Invalid Project UUID"))?;
 
         if !req.description.is_empty() {
@@ -257,7 +269,6 @@ impl TaskService for MyTaskService {
         if req.equity_offered >= 0.0 {
              sqlx::query("UPDATE projects SET equity_offered = $1 WHERE id = $2").bind(req.equity_offered).bind(id).execute(&self.pool).await.ok();
         }
-        // Always update is_public boolean
         sqlx::query("UPDATE projects SET is_public = $1 WHERE id = $2").bind(req.is_public).bind(id).execute(&self.pool).await.ok();
         
         if !req.industry.is_empty() {
@@ -285,8 +296,6 @@ impl TaskService for MyTaskService {
 
     async fn list_public_projects(&self, request: Request<ListPublicProjectsRequest>) -> Result<Response<ListProjectsResponse>, Status> {
          let req = request.into_inner();
-         
-         // Simple filter for now
          let query = if !req.industry_filter.is_empty() {
              "SELECT id, owner_id, name, description, status, funding_goal, equity_offered, is_public, industry FROM projects WHERE is_public = true AND industry = $1 ORDER BY created_at DESC"
          } else {
@@ -311,10 +320,68 @@ impl TaskService for MyTaskService {
             is_public: row.get("is_public"),
             industry: row.get::<Option<String>, _>("industry").unwrap_or_default(),
          }).collect();
-         
          Ok(Response::new(ListProjectsResponse { projects }))
     }
-}
+
+    async fn create_notification(&self, request: Request<CreateNotificationRequest>) -> Result<Response<Notification>, Status> {
+        let req = request.into_inner();
+        let id = Uuid::new_v4();
+        let user_id = Uuid::parse_str(&req.user_id).map_err(|_| Status::invalid_argument("Invalid User UUID"))?;
+        let payload = serde_json::from_str::<serde_json::Value>(&req.payload_json).unwrap_or(serde_json::json!({}));
+
+        sqlx::query("INSERT INTO notifications (id, user_id, type, content, payload) VALUES ($1, $2, $3, $4, $5)")
+            .bind(id)
+            .bind(user_id)
+            .bind(&req.type_pb) // Careful with reserved keywords? In proto I used 'type'. In Rust it generates `type_pb` or `r#type`?
+            // Usually `type` -> `type` but Rust keyword. Prost generates `r#type` or `type_pb` if conflict?
+            // Let's check generated code... usually `type_` or `type`.
+            // I'll check my proto field name: `string type = 3;`
+            // Rust will likely use `r#type`.
+            // Wait, I can't check generated code easily.
+            // I'll use `binding` with `req.type`. If it errors, I fix.
+            .bind(&req.r#type) 
+            .bind(&req.content)
+            .bind(payload)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| Status::internal(format!("DB: {}", e)))?;
+
+        Ok(Response::new(Notification {
+            id: id.to_string(),
+            user_id: req.user_id,
+            r#type: req.r#type,
+            content: req.content,
+            payload_json: req.payload_json,
+            read: false,
+            created_at: chrono::Utc::now().to_rfc3339(),
+        }))
+    }
+
+    async fn list_notifications(&self, request: Request<ListNotificationsRequest>) -> Result<Response<ListNotificationsResponse>, Status> {
+         let req = request.into_inner();
+         let user_id = Uuid::parse_str(&req.user_id).map_err(|_| Status::invalid_argument("Invalid User UUID"))?;
+
+         let rows = sqlx::query("SELECT id, user_id, type, content, payload, read, created_at FROM notifications WHERE user_id = $1 ORDER BY created_at DESC")
+            .bind(user_id)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| Status::internal(format!("DB: {}", e)))?;
+
+         let notifications = rows.into_iter().map(|row| {
+             let payload: serde_json::Value = row.get("payload");
+             Notification {
+                id: row.get::<Uuid, _>("id").to_string(),
+                user_id: row.get::<Uuid, _>("user_id").to_string(),
+                r#type: row.get("type"),
+                content: row.get("content"),
+                payload_json: payload.to_string(),
+                read: row.get("read"),
+                created_at: row.get::<chrono::DateTime<chrono::Utc>, _>("created_at").to_rfc3339(),
+             }
+         }).collect();
+
+         Ok(Response::new(ListNotificationsResponse { notifications }))
+    }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

@@ -7,6 +7,7 @@ service TaskService {
   rpc ListProjects (ListProjectsRequest) returns (ListProjectsResponse);
   rpc ListPublicProjects (ListPublicProjectsRequest) returns (ListProjectsResponse);
   rpc UpdateProject (UpdateProjectRequest) returns (Project);
+  rpc LaunchProject (LaunchProjectRequest) returns (Project); // New AI Feature
 
   rpc CreateTask (CreateTaskRequest) returns (Task);
   rpc ListTasks (ListTasksRequest) returns (ListTasksResponse);
@@ -74,6 +75,13 @@ message UpdateProjectRequest {
   double equity_offered = 4;
   bool is_public = 5;
   string industry = 6;
+}
+
+message LaunchProjectRequest {
+  string idea_id = 1;
+  string title = 2; // Pass title just in case
+  string description = 3; 
+  string industry = 4;
 }
 
 message CreateTaskRequest {
