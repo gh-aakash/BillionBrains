@@ -35,13 +35,13 @@ CREATE TABLE IF NOT EXISTS idea_skills (
 CREATE TABLE IF NOT EXISTS projects (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     owner_id UUID NOT NULL REFERENCES users(id),
-    name VARCHAR(255) NOT NULL,
+    name TEXT NOT NULL,
     description TEXT,
-    status VARCHAR(50) DEFAULT 'active',
-    funding_goal FLOAT DEFAULT 0,
-    equity_offered FLOAT DEFAULT 0,
+    status TEXT DEFAULT 'active',
+    funding_goal DOUBLE PRECISION DEFAULT 0.0,
+    equity_offered DOUBLE PRECISION DEFAULT 0.0,
     is_public BOOLEAN DEFAULT FALSE,
-    industry VARCHAR(100),
+    industry TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -62,3 +62,15 @@ CREATE TABLE IF NOT EXISTS tasks (
 CREATE INDEX IF NOT EXISTS idx_ideas_creator_id ON ideas(creator_id);
 CREATE INDEX IF NOT EXISTS idx_projects_owner_id ON projects(owner_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id);
+
+-- Notifications Table
+CREATE TABLE IF NOT EXISTS notifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id),
+    type VARCHAR(50),
+    content TEXT,
+    payload JSONB,
+    read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);

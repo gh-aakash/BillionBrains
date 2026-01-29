@@ -19,6 +19,7 @@ shared-proto = { path = "../../shared-libs/proto" }
 time = "=0.3.36"
 base64ct = "=1.6.0"
 jsonwebtoken = "10.3.0"
+argon2 = "0.5.3"
 
 [build-dependencies]
 tonic-build = "0.12"

@@ -20,9 +20,11 @@ message GetUserRequest {
 }
 
 message CreateUserRequest {
-  string username = 1;
+  string username = 1; // email
   string full_name = 2;
   string bio = 3;
+  string password = 4;
+  string role = 5; // 'creator' or 'investor'
 }
 
 message LoginRequest {
