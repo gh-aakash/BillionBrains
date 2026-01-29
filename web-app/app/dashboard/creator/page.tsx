@@ -3,9 +3,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import { BarChart, DollarSign, Rocket, Users, Layout, List } from "lucide-react"
+import { BarChart, DollarSign, Rocket, Users, Layout, List, FileText } from "lucide-react"
 import { ProjectBoard } from "@/components/dashboard/project-board"
 import { ProjectList } from "@/components/dashboard/project-list"
+import { ProjectDocs } from "@/components/dashboard/project-docs"
 
 export default function CreatorDashboardPage() {
     return (
@@ -21,7 +22,7 @@ export default function CreatorDashboardPage() {
                 <TabsList>
                     <TabsTrigger value="overview">Overview</TabsTrigger>
                     <TabsTrigger value="projects">Projects & Tasks</TabsTrigger>
-                    <TabsTrigger value="docs" disabled>Docs</TabsTrigger>
+                    <TabsTrigger value="docs">Docs</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="overview" className="space-y-4">
@@ -32,7 +33,7 @@ export default function CreatorDashboardPage() {
                                 <DollarSign className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">$45,231.89</div>
+                                <div className="text-2xl font-bold">$45,231.90</div>
                                 <p className="text-xs text-muted-foreground">+20.1% from last month</p>
                             </CardContent>
                         </Card>
@@ -87,6 +88,10 @@ export default function CreatorDashboardPage() {
                             <ProjectList />
                         </TabsContent>
                     </Tabs>
+                </TabsContent>
+
+                <TabsContent value="docs" className="space-y-4">
+                    <ProjectDocs />
                 </TabsContent>
             </Tabs>
         </div>
