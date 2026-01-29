@@ -117,6 +117,10 @@ impl TaskService for MyTaskService {
             name: req.name,
             description: req.description,
             status: "active".into(),
+            funding_goal: 0.0,
+            equity_offered: 0.0,
+            is_public: false,
+            industry: "".into(),
         }))
     }
 
@@ -124,7 +128,7 @@ impl TaskService for MyTaskService {
          let req = request.into_inner();
          let owner_id = Uuid::parse_str(&req.owner_id).map_err(|_| Status::invalid_argument("Invalid Owner UUID"))?;
          
-         let rows = sqlx::query("SELECT id, owner_id, name, description, status FROM projects WHERE owner_id = $1 ORDER BY created_at DESC")
+         let rows = sqlx::query("SELECT id, owner_id, name, description, status, funding_goal, equity_offered, is_public, industry FROM projects WHERE owner_id = $1 ORDER BY created_at DESC")
             .bind(owner_id)
             .fetch_all(&self.pool)
             .await
@@ -134,8 +138,12 @@ impl TaskService for MyTaskService {
             id: row.get::<Uuid, _>("id").to_string(),
             owner_id: row.get::<Uuid, _>("owner_id").to_string(),
             name: row.get("name"),
-            description: row.get("description"),
+            description: row.get::<Option<String>, _>("description").unwrap_or_default(),
             status: row.get("status"), 
+            funding_goal: row.get("funding_goal"),
+            equity_offered: row.get("equity_offered"),
+            is_public: row.get("is_public"),
+            industry: row.get::<Option<String>, _>("industry").unwrap_or_default(),
          }).collect();
          
          Ok(Response::new(ListProjectsResponse { projects }))
@@ -302,6 +310,67 @@ impl TaskService for MyTaskService {
             industry: row.get::<Option<String>, _>("industry").unwrap_or_default(),
          }).collect();
          Ok(Response::new(ListProjectsResponse { projects }))
+    }
+
+    async fn launch_project(&self, request: Request<LaunchProjectRequest>) -> Result<Response<Project>, Status> {
+        let req = request.into_inner();
+        let idea_uuid = Uuid::parse_str(&req.idea_id).map_err(|_| Status::invalid_argument("Invalid Idea UUID"))?;
+
+        // 1. Fetch Idea info (owner)
+        let idea_row = sqlx::query("SELECT creator_id FROM ideas WHERE id = $1")
+            .bind(idea_uuid)
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|_| Status::not_found("Idea not found"))?;
+        
+        let owner_id: Uuid = idea_row.get("creator_id");
+        let project_id = Uuid::new_v4();
+
+        // 2. Create Project
+        sqlx::query("INSERT INTO projects (id, owner_id, name, description, industry, status) VALUES ($1, $2, $3, $4, $5, 'active')")
+            .bind(project_id)
+            .bind(owner_id)
+            .bind(&req.title)
+            .bind(&req.description)
+            .bind(&req.industry)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| Status::internal(format!("DB Project Create: {}", e)))?;
+
+        // 3. Create Seed Tasks (AI Simulation)
+        let seed_tasks = [
+            ("Market Research", "Identify target demographics and competitors."),
+            ("MVP Prototype", "Build the core functionality of the solution."),
+            ("Investor Deck", "Prepare slides for the first funding round."),
+        ];
+
+        for (title, desc) in seed_tasks {
+             sqlx::query("INSERT INTO tasks (id, project_id, title, description, status, priority) VALUES ($1, $2, $3, $4, 'todo', 'high')")
+                .bind(Uuid::new_v4())
+                .bind(project_id)
+                .bind(title)
+                .bind(desc)
+                .execute(&self.pool)
+                .await.ok();
+        }
+
+        // 4. Update Idea Status
+        sqlx::query("UPDATE ideas SET status = 'launched' WHERE id = $1")
+            .bind(idea_uuid)
+            .execute(&self.pool)
+            .await.ok();
+
+        Ok(Response::new(Project {
+            id: project_id.to_string(),
+            owner_id: owner_id.to_string(),
+            name: req.title,
+            description: req.description,
+            status: "active".into(),
+            funding_goal: 0.0,
+            equity_offered: 0.0,
+            is_public: false,
+            industry: req.industry,
+        }))
     }
 
     async fn create_notification(&self, request: Request<CreateNotificationRequest>) -> Result<Response<Notification>, Status> {
