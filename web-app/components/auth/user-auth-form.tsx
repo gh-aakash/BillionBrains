@@ -12,16 +12,27 @@ interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> { }
 
 export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     const [isLoading, setIsLoading] = React.useState<boolean>(false)
+    const [error, setError] = React.useState<string>("")
 
     async function onSubmit(event: React.SyntheticEvent) {
         event.preventDefault()
         setIsLoading(true)
+        setError("")
 
-        setTimeout(() => {
-            setIsLoading(false)
-            // Mock redirect for demo
+        const formData = new FormData(event.target as HTMLFormElement)
+
+        // Import dynamically to avoid client-side bundling issues if any
+        const { loginAction } = await import("@/app/actions/login")
+
+        const result = await loginAction(formData)
+
+        setIsLoading(false)
+
+        if (result?.error) {
+            setError(result.error)
+        } else {
             window.location.href = "/dashboard"
-        }, 3000)
+        }
     }
 
     return (
@@ -34,6 +45,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                         </Label>
                         <Input
                             id="email"
+                            name="email"
                             placeholder="name@example.com"
                             type="email"
                             autoCapitalize="none"
@@ -42,6 +54,21 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                             disabled={isLoading}
                         />
                     </div>
+                    <div className="grid gap-1">
+                        <Label className="sr-only" htmlFor="password">
+                            Password
+                        </Label>
+                        <Input
+                            id="password"
+                            name="password"
+                            placeholder="Password"
+                            type="password"
+                            autoCapitalize="none"
+                            autoComplete="current-password"
+                            disabled={isLoading}
+                        />
+                    </div>
+                    {error && <p className="text-sm text-red-500">{error}</p>}
                     <Button disabled={isLoading}>
                         {isLoading && (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
